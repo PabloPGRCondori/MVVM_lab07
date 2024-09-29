@@ -26,23 +26,20 @@ import androidx.compose.runtime.setValue
 @Composable
 fun ScreenUser() {
     val context = LocalContext.current
-    var db: UserDatabase
-    var id        by remember { mutableStateOf("") }
-    var firstName by remember { mutableStateOf("") }
-    var lastName  by remember { mutableStateOf("") }
-    var dataUser  = remember { mutableStateOf("") }
-
-    db = crearDatabase(context)
-
+    val db = crearDatabase(context)
     val dao = db.userDao()
-
     val coroutineScope = rememberCoroutineScope()
+
+    var id by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+    var dataUser by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-    ){
+    ) {
         Spacer(Modifier.height(50.dp))
         TextField(
             value = id,
@@ -63,32 +60,54 @@ fun ScreenUser() {
             label = { Text("Last Name:") },
             singleLine = true
         )
+
+        // Agregar usuario
         Button(
             onClick = {
-                val user = User(0,firstName, lastName)
+                val user = User(0, firstName, lastName)
                 coroutineScope.launch {
                     AgregarUsuario(user = user, dao = dao)
+                    // Resetear campos
+                    firstName = ""
+                    lastName = ""
+                    // Listar usuarios después de agregar
+                    dataUser = getUsers(dao = dao)
                 }
-                firstName = ""
-                lastName = ""
             }
         ) {
-            Text("Agregar Usuario", fontSize=16.sp)
+            Text("Agregar Usuario", fontSize = 16.sp)
         }
+
+        // Listar usuarios
         Button(
             onClick = {
-                val user = User(0,firstName, lastName)
                 coroutineScope.launch {
-                    val data = getUsers( dao = dao)
-                    dataUser.value = data
+                    dataUser = getUsers(dao = dao)
                 }
             }
         ) {
-            Text("Listar Usuarios", fontSize=16.sp)
+            Text("Listar Usuarios", fontSize = 16.sp)
         }
-        Text(
-            text = dataUser.value, fontSize = 20.sp
-        )
+
+        // Eliminar último usuario
+        Button(
+            onClick = {
+                coroutineScope.launch {
+                    val lastUser = dao.getLastUser()
+                    if (lastUser != null) {
+                        dao.delete(lastUser)
+                        dataUser = getUsers(dao = dao) // Actualizar lista
+                    } else {
+                        dataUser = "No hay usuarios para eliminar"
+                    }
+                }
+            }
+        ) {
+            Text("Eliminar Último Usuario", fontSize = 16.sp)
+        }
+
+        // Mostrar los usuarios listados
+        Text(text = dataUser, fontSize = 16.sp)
     }
 }
 
@@ -101,25 +120,19 @@ fun crearDatabase(context: Context): UserDatabase {
     ).build()
 }
 
-suspend fun getUsers(dao:UserDao): String {
-    var rpta: String = ""
-    //LaunchedEffect(Unit) {
-    val users = dao.getAll()
-    users.forEach { user ->
-        val fila = user.firstName + " - " + user.lastName + "\n"
-        rpta += fila
-    }
-    //}
-    return rpta
-}
+        // Función para obtener todos los usuarios y convertirlos a un String
+        suspend fun getUsers(dao: UserDao): String {
+            return dao.getAll().joinToString(separator = "\n") { user ->
+                "${user.firstName} - ${user.lastName}"
+            }
+        }
 
-suspend fun AgregarUsuario(user: User, dao:UserDao): Unit {
-    //LaunchedEffect(Unit) {
-    try {
-        dao.insert(user)
-    }
-    catch (e: Exception) {
-        Log.e("User","Error: insert: ${e.message}")
-    }
-    //}
-}
+        // Función para agregar un usuario
+        suspend fun AgregarUsuario(user: User, dao: UserDao) {
+            try {
+                dao.insert(user)
+            } catch (e: Exception) {
+                Log.e("User", "Error: insert: ${e.message}")
+            }
+        }
+
