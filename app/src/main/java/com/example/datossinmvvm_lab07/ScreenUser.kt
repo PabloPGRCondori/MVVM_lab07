@@ -22,7 +22,13 @@ import androidx.room.Room
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.List
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenUser() {
     val context = LocalContext.current
@@ -35,82 +41,88 @@ fun ScreenUser() {
     var lastName by remember { mutableStateOf("") }
     var dataUser by remember { mutableStateOf("") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Spacer(Modifier.height(50.dp))
-        TextField(
-            value = id,
-            onValueChange = { id = it },
-            label = { Text("ID (solo lectura)") },
-            readOnly = true,
-            singleLine = true
-        )
-        TextField(
-            value = firstName,
-            onValueChange = { firstName = it },
-            label = { Text("First Name: ") },
-            singleLine = true
-        )
-        TextField(
-            value = lastName,
-            onValueChange = { lastName = it },
-            label = { Text("Last Name:") },
-            singleLine = true
-        )
-
-        // Agregar usuario
-        Button(
-            onClick = {
-                val user = User(0, firstName, lastName)
-                coroutineScope.launch {
-                    AgregarUsuario(user = user, dao = dao)
-                    // Resetear campos
-                    firstName = ""
-                    lastName = ""
-                    // Listar usuarios después de agregar
-                    dataUser = getUsers(dao = dao)
-                }
-            }
-        ) {
-            Text("Agregar Usuario", fontSize = 16.sp)
-        }
-
-        // Listar usuarios
-        Button(
-            onClick = {
-                coroutineScope.launch {
-                    dataUser = getUsers(dao = dao)
-                }
-            }
-        ) {
-            Text("Listar Usuarios", fontSize = 16.sp)
-        }
-
-        // Eliminar último usuario
-        Button(
-            onClick = {
-                coroutineScope.launch {
-                    val lastUser = dao.getLastUser()
-                    if (lastUser != null) {
-                        dao.delete(lastUser)
-                        dataUser = getUsers(dao = dao) // Actualizar lista
-                    } else {
-                        dataUser = "No hay usuarios para eliminar"
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Gestión de Usuarios") },
+                actions = {
+                    // Botón para agregar usuario
+                    IconButton(onClick = {
+                        val user = User(0, firstName, lastName)
+                        coroutineScope.launch {
+                            AgregarUsuario(user = user, dao = dao)
+                            // Resetear campos
+                            firstName = ""
+                            lastName = ""
+                            // Listar usuarios después de agregar
+                            dataUser = getUsers(dao = dao)
+                        }
+                    }) {
+                        // Ícono para agregar usuario
+                        Icon(imageVector = Icons.Default.Check, contentDescription = "Agregar Usuario")
+                    }
+                    // Botón para listar usuarios
+                    IconButton(onClick = {
+                        coroutineScope.launch {
+                            dataUser = getUsers(dao = dao) // Actualiza la lista de usuarios
+                        }
+                    }) {
+                        // Ícono para listar usuarios
+                        Icon(imageVector = Icons.Default.List, contentDescription = "Listar Usuarios")
                     }
                 }
-            }
-        ) {
-            Text("Eliminar Último Usuario", fontSize = 16.sp)
+            )
         }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
+            Spacer(Modifier.height(50.dp))
+            TextField(
+                value = id,
+                onValueChange = { id = it },
+                label = { Text("ID (solo lectura)") },
+                readOnly = true,
+                singleLine = true
+            )
+            TextField(
+                value = firstName,
+                onValueChange = { firstName = it },
+                label = { Text("First Name: ") },
+                singleLine = true
+            )
+            TextField(
+                value = lastName,
+                onValueChange = { lastName = it },
+                label = { Text("Last Name:") },
+                singleLine = true
+            )
 
-        // Mostrar los usuarios listados
-        Text(text = dataUser, fontSize = 16.sp)
+            // Eliminar último usuario
+            Button(
+                onClick = {
+                    coroutineScope.launch {
+                        val lastUser = dao.getLastUser()
+                        if (lastUser != null) {
+                            dao.delete(lastUser)
+                            dataUser = getUsers(dao) // Actualizar lista después de eliminar
+                        } else {
+                            dataUser = "No hay usuarios para eliminar"
+                        }
+                    }
+                }
+            ) {
+                Text("Eliminar Último Usuario", fontSize = 16.sp)
+            }
+
+            // Mostrar los usuarios listados
+            Text(text = dataUser, fontSize = 16.sp)
+        }
     }
 }
-
 @Composable
 fun crearDatabase(context: Context): UserDatabase {
     return Room.databaseBuilder(
@@ -135,4 +147,9 @@ fun crearDatabase(context: Context): UserDatabase {
                 Log.e("User", "Error: insert: ${e.message}")
             }
         }
+@Preview(showBackground = true)
+@Composable
+fun PreviewScreenUser() {
+    ScreenUser()
+}
 
